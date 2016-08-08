@@ -1,0 +1,55 @@
+#
+# NOTICE:
+# 
+# This file is intended to be platform agnostic.
+# It was designed for a macOS environment, but
+# should work with linux/bsd too.
+#
+
+# ll
+alias ll="ls -la"
+
+# global editor for git etc.
+export VISUAL=nano
+export EDITOR="$VISUAL"
+
+# cherry-pick
+alias pick='git cherry-pick'
+
+function removeFromPath() {
+  export PATH=$(echo $PATH | sed -E -e "s;:$1;;" -e "s;$1:?;;")
+}
+
+# Custom CyanogenMod helper functions
+# Usage:
+#   1) Fetch from upstream:		cfetch <branch>
+#   2) Push to gerrit:			cpush <branch>
+#   3) Push to github (bypass gerrit):	cdpush <branch>
+#   4) Force push to github:		cdfpush <branch>
+#
+function cfetch() {
+  local branch=$1
+  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
+  git fetch git@github.com:CyanogenMod/$remote.git $branch
+}
+function cpush() {
+  local branch=$1
+  local protocol="ssh"
+  local user="RaymanFX"
+  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
+  git push $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/for/$branch
+}
+function cdpush() {
+  local branch=$1
+  local protocol="ssh"
+  local user="RaymanFX"
+  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
+  git push $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/heads/$branch
+}
+function cdfpush() {
+  local branch=$1
+  local protocol="ssh"
+  local user="RaymanFX"
+  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
+  git push -f $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/heads/$branch
+}
