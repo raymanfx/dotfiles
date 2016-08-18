@@ -1,6 +1,6 @@
 # Import the bash extensions
 # KEEP THIS AT THE TOP!
-source /Volumes/MacSSD/bash_extensions
+source ~/bash_extensions
 
 # homebrew curl (with openssl)
 export PATH=$(brew --prefix curl)/bin:$PATH
