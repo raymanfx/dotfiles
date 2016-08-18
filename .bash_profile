@@ -9,7 +9,7 @@ export PATH=$(brew --prefix curl)/bin:$PATH
 export PATH="~/android-sdk/platform-tools:$PATH"
 
 # Java 7 for Android
-export JAVA_HOME=`/usr/libexec/java_home -v 1.7.0_80`
+export JAVA_HOME=`/usr/libexec/java_home -v 1.8.0_102`
 
 # ccache
 export USE_CCACHE=1
