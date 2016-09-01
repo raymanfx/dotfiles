@@ -5,15 +5,18 @@ source ~/bash_extensions
 # homebrew curl (with openssl)
 export PATH=$(brew --prefix curl)/bin:$PATH
 
+# google repo tool
+export PATH="$PATH:~/bin"
+
 # Android SDK tools
-export PATH="~/android-sdk/platform-tools:$PATH"
+export PATH="~/android-sdk-macosx/platform-tools:$PATH"
 
 # Java 7 for Android
 export JAVA_HOME=`/usr/libexec/java_home -v 1.8.0_102`
 
 # ccache
 export USE_CCACHE=1
-export CCACHE_DIR=/Volumes/MacSSD/ccache
+export CCACHE_DIR=~/ccache
 
 # Android build environment (Mac OS)
 export BUILD_MAC_SDK_EXPERIMENTAL=1
