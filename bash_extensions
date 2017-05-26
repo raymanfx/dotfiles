@@ -6,71 +6,167 @@
 # should work with linux/bsd too.
 #
 
-# enable color support of ls and also add handy aliases
-if [ -x /usr/bin/dircolors ]; then
-    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
-    alias ls='ls --color=auto'
-    #alias dir='dir --color=auto'
-    #alias vdir='vdir --color=auto'
-
-    alias grep='grep --color=auto'
-    alias fgrep='fgrep --color=auto'
-    alias egrep='egrep --color=auto'
-fi
-
 # colored GCC warnings and errors
 export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# colors for macOS
+export CLICOLOR=1
+export LSCOLORS=GxFxCxDxBxegedabagaced
 
 # some more ls aliases
 alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
-# Add an "alert" alias for long running commands.  Use like so:
-#   sleep 10; alert
-alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
-
 # global editor for git etc.
-export VISUAL=nano
+export VISUAL=vim
 export EDITOR="$VISUAL"
 
 # cherry-pick
 alias pick='git cherry-pick'
 
+# list all .DS_Store files in current dir
+alias lsds='find . -type f -name ".DS_Store"'
+
 function removeFromPath() {
   export PATH=$(echo $PATH | sed -E -e "s;:$1;;" -e "s;$1:?;;")
 }
 
-# Custom CyanogenMod helper functions
+# Add change-id to all commits since $1
+function addChangeId() {
+  since=$1
+  commits=`git log --oneline --reverse $1..HEAD | cut -d" " -f1`
+
+  git reset --hard $since
+  for commit in $commits; do
+    echo $commit
+    git cherry-pick $commit
+    git commit --amend <<< :wq
+  done
+}
+
+# Setup ccache
+function ccache-s() {
+  if [ "$USE_CCACHE" != "1" ]; then
+    echo "USE_CCACHE not set, bailing!"
+    return
+  fi
+
+  if [ ! -d "$CCACHE_DIR" ]; then
+    echo "CCACHE_DIR not set, bailing!"
+    return
+  fi
+
+  device="$1"
+  if [ -z "$device" ]; then
+    echo "device parameter invalid, bailing!"
+    return
+  fi
+
+  if [ "$OLD_CCACHE_DIR" = "" ]; then
+    export OLD_CCACHE_DIR="$CCACHE_DIR"
+  else
+    export CCACHE_DIR="$OLD_CCACHE_DIR"
+  fi
+
+  device_cache="$CCACHE_DIR/$device"
+  if [ ! -d "$device_cache" ]; then
+    mkdir -p "$device_cache"
+  fi
+
+  export CCACHE_DIR="$device_cache"
+  $(which ccache) -M 15G
+  touch "$device_cache/.last_used"
+}
+
+# setup ccache for lunch combo and lunch
+function lunch-c() {
+  local combo="$1"
+  if [ -z "$combo" ]; then
+    echo "No argument given, bailing!"
+    return
+  fi
+
+  local device=`echo "$combo" | cut -d"_" -f2 | cut -d"-" -f1`
+  if [ -z "$device" ]; then
+    echo "Could not extract device from argument, bailing!"
+    return
+  fi
+
+  echo "Setting up ccache for: $device"
+  ccache-s "$device"
+  echo "Performing the real lunching"
+  lunch "$combo"
+}
+
+# Custom LineageOS helper functions
 # Usage:
-#   1) Fetch from upstream:		cfetch <branch>
-#   2) Push to gerrit:			cpush <branch>
-#   3) Push to github (bypass gerrit):	cdpush <branch>
-#   4) Force push to github:		cdfpush <branch>
+#   1) Fetch from upstream:               lfetch <branch>
+#   2) Push to gerrit:                    lpush <branch>
+#   3) Push to github (bypass gerrit):    lpush -d <branch>
+#   4) Force push to github:              lpush -df <branch>
 #
-function cfetch() {
+function lfetch() {
   local branch=$1
-  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
-  git fetch git@github.com:CyanogenMod/$remote.git $branch
+  local remote=$(cat .git/config | grep url | rev | cut -d/ -f1 | rev | head -1)
+  git fetch git@github.com:LineageOS/$remote $branch
 }
-function cpush() {
-  local branch=$1
+function lpush() {
+  local args=("$@")
+  local arglen=$#
+  local flags=""
+  if [[ "${args[0]}" != "-*" ]]; then
+    flags="${args[0]}"
+  fi
+  local branch=${args[$arglen-1]}
+  local revision="HEAD"
   local protocol="ssh"
   local user="RaymanFX"
-  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
-  git push $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/for/$branch
+  local remote=$(cat .git/config | grep url | rev | cut -d/ -f1 | rev | head -1)
+  local destination="$revision:refs/for/$branch"
+  if [ "$flags" = "-d" ]; then
+    destination="$revision:refs/heads/$branch"
+  fi
+  local pushflags=""
+  if [ "$flags" = "-f" ]; then
+    pushflags="-f"
+  fi
+  echo "Running: git push $pushflags $protocol://$user@review.lineageos.org:29418/LineageOS/$remote $destination"
+  git push $pushflags $protocol://$user@review.lineageos.org:29418/LineageOS/$remote $destination
 }
-function cdpush() {
+
+# Custom Paranoid Android helper functions
+# Usage:
+#   1) Fetch from upstream:               pfetch <branch>
+#   2) Push to gerrit:                    ppush <branch>
+#   3) Push to github (bypass gerrit):    ppush -d <branch>
+#   4) Force push to github:              ppush -df <branch>
+#
+function pfetch() {
   local branch=$1
+  local remote=$(cat .git/config | grep url | rev | cut -d/ -f1 | rev | head -1)
+  git fetch git@github.com:AOSPA/$remote $branch
+}
+function ppush() {
+  local args=("$@")
+  local arglen=$#
+  local flags=""
+  if [[ "${args[0]}" != "-*" ]]; then
+    flags="${args[0]}"
+  fi
+  local branch=${args[$arglen-1]}
+  local revision="HEAD"
   local protocol="ssh"
   local user="RaymanFX"
-  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
-  git push $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/heads/$branch
-}
-function cdfpush() {
-  local branch=$1
-  local protocol="ssh"
-  local user="RaymanFX"
-  local remote=$(cat .git/config | grep github.com/CyanogenMod | cut -d/ -f5)
-  git push -f $protocol://$user@review.cyanogenmod.org:29418/CyanogenMod/$remote.git HEAD:refs/heads/$branch
+  local remote=$(cat .git/config | grep url | rev | cut -d/ -f1 | rev | head -1)
+  local destination="$revision:refs/for/$branch"
+  if [ "$flags" = "-d" ]; then
+    destination="$revision:refs/heads/$branch"
+  fi
+  local pushflags=""
+  if [ "$flags" = "-f" ]; then
+    pushflags="-f"
+  fi
+  echo "Running: git push $pushflags $protocol://$user@gerrit.aospa.co:29418/AOSPA/$remote $destination"
+  git push $pushflags $protocol://$user@gerrit.aospa.co:29418/AOSPA/$remote $destination
 }
